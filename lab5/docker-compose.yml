@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: msa_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  # Databases (Database Per Service Pattern)
+  product-db:
+    image: mongo:latest
+    container_name: msa_product_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - product_db_data:/data/db
+
+  order-db:
+    image: mongo:latest
+    container_name: msa_order_db
+    ports:
+      - "27018:27017" # Exposed to different host port
+    volumes:
+      - order_db_data:/data/db
+
+  customer-db:
+    image: mongo:latest
+    container_name: msa_customer_db
+    ports:
+      - "27019:27017" # Exposed to different host port
+    volumes:
+      - customer_db_data:/data/db
+
+  # Microservices
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: msa_api_gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - product-service
+      - order-service
+      - customer-service
+
+  product-service:
+    build:
+      context: ./product-service
+    container_name: msa_product_service
+    ports:
+      - "3001:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://product-db:27017/product_db
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - product-db
+      - rabbitmq
+
+  order-service:
+    build:
+      context: ./order-service
+    container_name: msa_order_service
+    ports:
+      - "3002:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://order-db:27017/order_db
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - order-db
+      - rabbitmq
+
+  customer-service:
+    build:
+      context: ./customer-service
+    container_name: msa_customer_service
+    ports:
+      - "3003:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://customer-db:27017/customer_db
+    depends_on:
+      - customer-db
+
+volumes:
+  product_db_data:
+  order_db_data:
+  customer_db_data:

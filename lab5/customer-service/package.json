@@ -1,0 +1,14 @@
+{
+  "name": "customer-service",
+  "version": "1.0.0",
+  "description": "Customer service for E-commerce Microservices",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.0.3",
+    "morgan": "^1.10.0"
+  }
+}
